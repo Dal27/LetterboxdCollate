@@ -2,6 +2,8 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 
+from openai import OpenAI
+
 from fastapi import FastAPI, Request, status
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -59,3 +61,64 @@ while(proceed):
         
 df = pd.DataFrame(data)
 df.to_csv("films.csv")
+
+client = OpenAI()
+
+file_response = client.files.create(
+  file=open("films.csv", "rb"),
+  purpose="assistants"
+)
+file_id = file_response.id
+
+assistant = client.beta.assistants.create(
+    instructions=("You are an movie recommendation bot, and you have access to the user's movie diary. You can recommend movies based on the user's diary entries."
+            "Identify High-Rated Movies: Focus on the movies rated highly. Genres and Directors: If available, look for patterns in genres or directors the user prefers. "
+            "Actors and Themes: Consider any recurring actors or themes if the data provides such insights. Variety: Ensure a diverse set of recommendations across different genres and themes."
+            "Since the current data only includes titles, years, ratings, and date watched, Focus on these aspects for recommendations. Based on this, Identify potential movies that align with user preferences."
+            "Keep the output incredibly concise, with information only necessary for the TMDB API to fetch the movie details. Do not recommend movies that the user has already watched. Ratings are stars out of 5."),
+    name="Movie Recommendation Bot",
+    tools=[{"type": "code_interpreter"}],
+    temperature=0.6,
+    model="gpt-4o"
+)
+
+
+
+
+print(client.beta.assistants.list())
+
+thread = client.beta.threads.create(
+messages=[
+  {
+    "role": "user",
+    "content": ("Using the data from my movie diary (attached file films.csv), can you recommend me 15 movies? "),
+    "attachments": [
+      {
+        "file_id": file_id,
+        "tools": [{"type": "code_interpreter"}]
+      }
+    ]
+  }
+]
+)
+print(thread)
+
+run = client.beta.threads.runs.create_and_poll(
+    assistant_id=assistant.id,
+    thread_id=thread.id
+)
+
+# if run.status == 'completed': 
+#     messages = client.beta.threads.messages.list(
+#         thread_id=thread.id
+#     )
+#     print(messages)
+# else:
+#     print(run.status)   
+    
+messages = client.beta.threads.messages.list(
+        thread_id=thread.id
+    )
+
+for message in reversed(messages.data):
+    print(message.role + ": " + message.content[0].text.value)
