@@ -75,7 +75,7 @@ assistant = client.beta.assistants.create(
             "Identify High-Rated Movies: Focus on the movies rated highly. Genres and Directors: If available, look for patterns in genres or directors the user prefers. "
             "Actors and Themes: Consider any recurring actors or themes if the data provides such insights. Variety: Ensure a diverse set of recommendations across different genres and themes."
             "Since the current data only includes titles, years, ratings, and date watched, Focus on these aspects for recommendations. Based on this, Identify potential movies that align with user preferences."
-            "Keep the output incredibly concise, with information only necessary for the TMDB API to fetch the movie details. Do not recommend movies that the user has already watched. Ratings are stars out of 5."),
+            "Keep the output incredibly concise, in format with no formatting: [Title, Year]. Do not recommend movies that the user has already watched. Ratings are stars out of 5."),
     name="Movie Recommendation Bot",
     tools=[{"type": "code_interpreter"}],
     temperature=0.6,
@@ -120,5 +120,6 @@ messages = client.beta.threads.messages.list(
         thread_id=thread.id
     )
 
-for message in reversed(messages.data):
-    print(message.role + ": " + message.content[0].text.value)
+if messages.data:
+    first_message = messages.data[0]
+    print(first_message.role + ": " + first_message.content[0].text.value)
