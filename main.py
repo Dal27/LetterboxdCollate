@@ -23,9 +23,9 @@ app = FastAPI()
 
 origins = [
     "http://localhost",
-    "https://localhost",
     "http://localhost:3000",
-    "https://localhost:3000",
+    "http://localhost:5173",
+    "http://localhost:8000",
 ]
 
 app.add_middleware(
@@ -38,7 +38,7 @@ app.add_middleware(
 
 class FilmRecommendation(BaseModel):
   title: str
-  year: str
+  tmdb: str
 
 class UserRequest(BaseModel):
     username: str
@@ -100,7 +100,7 @@ async def get_recommendations_from_openai(file_path):
           "Consider any recurring actors or themes if the data provides such insights. Ratings are stars out of 5. "
           "Since the current data only includes titles, years, ratings, and date watched, focus on these aspects for recommendations. "
           "Identify potential movies that align with user preferences. "
-          "Keep the output incredibly concise, in the format: [Title, Year] (no formatting or numbering). "
+          "Keep the output incredibly concise, in the format: [Title, TMDB movie id] (no formatting or numbering). "
           "Double-check to see if a recommended movie is in the movie diary, if so remove the recommendation."
       ),
       name="Movie Recommendation Bot",
@@ -145,8 +145,8 @@ async def get_recommendations_from_openai(file_path):
       films = []
       for rec in recommendations:
         if rec:
-          title, year = rec.split(", ")
-          films.append(FilmRecommendation(title=title, year=year))
+          title, tmdb = rec.split(", ")
+          films.append(FilmRecommendation(title=title, tmdb=tmdb))
       return films
     else:
       raise HTTPException(status_code=404, detail="No recommendations found")

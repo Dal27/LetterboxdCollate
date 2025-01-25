@@ -2,7 +2,7 @@ Tired of endless scrolling and mediocre movie suggestions?
 
 ## Introducing LetterboxdCollate
 
-The AI-powered movie recommendation engine that gets you. Forget generic algorithms and pre-programmed lists. LetterboxdCollate taps into the vast knowledge and creative power of the OpenAI API to deliver truly personalized recommendations tailored to your unique tastes.
+The LLM-powered movie recommendation engine that gets you. Forget generic algorithms and pre-programmed lists. LetterboxdCollate taps into the vast knowledge and creative power of the OpenAI API to deliver truly personalized recommendations tailored to your unique tastes.
 
 ## The Problem
 
@@ -19,7 +19,3 @@ Unlike other recommendation engines, LetterboxdCollate isn't limited by pre-defi
 ## The Technology
 
 LetterboxdCollate leverages the OpenAI API, a cutting-edge language model, to generate personalized movie recommendations based on your Letterboxd profile data. Its intuitive interface seamlessly integrates with Letterboxd, making it easy to discover new films and explore your cinematic world.
-
-## The Call to Action
-
-Ready to experience the future of movie recommendations? Visit our website and sign up for early access to LetterboxdCollate. Discover the films you'll love with the power of AI.
