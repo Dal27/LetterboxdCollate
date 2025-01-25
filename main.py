@@ -4,32 +4,41 @@ import pandas as pd
 
 from openai import OpenAI
 
-from fastapi import FastAPI, Request, status
+import uvicorn
+from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
+from typing import List
 
 
 
 
-# app = FastAPI()
+app = FastAPI()
 
-# origins = [
-#     "http://localhost",
-#     "https://localhost",
-#     "http://localhost:3000",
-#     "https://localhost:3000",
-# ]
+origins = [
+    "http://localhost",
+    "https://localhost",
+    "http://localhost:3000",
+    "https://localhost:3000",
+]
 
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=origins,
-#     allow_credentials=True,
-#     allow_methods=["*"],
-#     allow_headers=["*"],
-# )
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
+class FilmRecommendation(BaseModel):
+  title: str
+  year: str
+
+class UserRequest(BaseModel):
+    username: str
 
 data = []
 current_page = 1
@@ -45,7 +54,7 @@ while(proceed):
     if not soup.find_all("tr", class_="diary-entry-row"):
         proceed = False
     else:
-        print("Currently Scraping page: "+str(current_page))
+        # print("Currently Scraping page: "+str(current_page))
         
         table = soup.find("table", id="diary-table")
         for row in table.find_all("tr", class_="diary-entry-row"):
@@ -71,27 +80,33 @@ file_response = client.files.create(
 file_id = file_response.id
 
 assistant = client.beta.assistants.create(
-    instructions=("You are an movie recommendation bot, and you have access to the user's movie diary. You can recommend movies based on the user's diary entries."
-            "Identify High-Rated Movies: Focus on the movies rated highly. Genres and Directors: If available, look for patterns in genres or directors the user prefers. "
-            "Actors and Themes: Consider any recurring actors or themes if the data provides such insights. Variety: Ensure a diverse set of recommendations across different genres and themes."
-            "Since the current data only includes titles, years, ratings, and date watched, Focus on these aspects for recommendations. Based on this, Identify potential movies that align with user preferences."
-            "Keep the output incredibly concise, in format with no formatting: [Title, Year]. Do not recommend movies that the user has already watched. Ratings are stars out of 5."),
+    instructions=(
+        "You are a movie recommendation bot, and you have access to the user's movie diary. "
+        "You can recommend movies based on the user's diary entries. "
+        "Focus on the movies rated highly. If available, look for patterns in genres or directors the user prefers. "
+        "Consider any recurring actors or themes if the data provides such insights. Ratings are stars out of 5. "
+        "Since the current data only includes titles, years, ratings, and date watched, focus on these aspects for recommendations. "
+        "Identify potential movies that align with user preferences. "
+        "Keep the output incredibly concise, in the format: [Title, Year] (no formatting or numbering). "
+        "Double-check to see if a recommended movie is in the movie diary, if so remove the recommendation."
+    ),
     name="Movie Recommendation Bot",
     tools=[{"type": "code_interpreter"}],
-    temperature=0.6,
+    temperature=0.8,
     model="gpt-4o"
 )
 
 
 
 
-print(client.beta.assistants.list())
+# print(client.beta.assistants.list())
 
 thread = client.beta.threads.create(
 messages=[
   {
     "role": "user",
-    "content": ("Using the data from my movie diary (attached file films.csv), can you recommend me 15 movies? "),
+    "content": ("Using the data from my movie diary (attached file films.csv), can you recommend me 15 movies? "
+                "Do not include any introductory phrases like 'Based on your highly-rated movies here are 15 movie recommendations' and do not include numbering of the films."),
     "attachments": [
       {
         "file_id": file_id,
@@ -101,25 +116,33 @@ messages=[
   }
 ]
 )
-print(thread)
+# print(thread)
 
 run = client.beta.threads.runs.create_and_poll(
     assistant_id=assistant.id,
     thread_id=thread.id
 )
 
-# if run.status == 'completed': 
-#     messages = client.beta.threads.messages.list(
-#         thread_id=thread.id
-#     )
-#     print(messages)
-# else:
-#     print(run.status)   
     
 messages = client.beta.threads.messages.list(
         thread_id=thread.id
     )
 
-if messages.data:
-    first_message = messages.data[0]
-    print(first_message.role + ": " + first_message.content[0].text.value)
+    
+@app.get("/recommendations", response_model=List[FilmRecommendation])
+async def get_recommendations():
+  try:
+    messages = client.beta.threads.messages.list(thread_id=thread.id)
+    if messages.data:
+      first_message = messages.data[0]
+      recommendations = first_message.content[0].text.value.split("\n")
+      films = []
+      for rec in recommendations:
+        if rec:
+          title, year = rec.split(", ")
+          films.append(FilmRecommendation(title=title, year=year))
+      return films
+    else:
+      raise HTTPException(status_code=404, detail="No recommendations found")
+  except Exception as e:
+    raise HTTPException(status_code=500, detail=str(e))
