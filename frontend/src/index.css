@@ -24,6 +24,8 @@
   color: var(--color-mocha);
   background-color: var(--color-creamy);
 
+  scrollbar-color: var(--color-cobbley) var(--color-greeny);
+
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;

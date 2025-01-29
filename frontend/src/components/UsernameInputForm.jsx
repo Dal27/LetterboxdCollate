@@ -9,7 +9,8 @@ const UsernameInputForm = ({ username, onChange, onSubmit }) => {
             </label>
            <button type="submit" className="inline-block rounded border border-bluey bg-pinky px-12 py-3 mx-8 text-sm 
            font-medium text-amber-700 hover:bg-transparent hover:text-greeny hover:font-bold focus:outline-none focus:ring">
-            Submit</button>
+            Submit
+            </button>
 
         </form>
     );

@@ -1,2 +1,4 @@
 films.csv
 __pycache__/main.cpython-312.pyc
+*.env
+test.py

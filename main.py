@@ -1,4 +1,6 @@
 import requests
+import os
+from dotenv import load_dotenv
 from bs4 import BeautifulSoup
 import pandas as pd
 
@@ -16,7 +18,8 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from typing import List
 
-
+# Load the environment variables
+load_dotenv()
 
 
 app = FastAPI()
@@ -39,6 +42,7 @@ app.add_middleware(
 class FilmRecommendation(BaseModel):
   title: str
   tmdb: str
+  poster: str
 
 class UserRequest(BaseModel):
     username: str
@@ -136,6 +140,8 @@ async def get_recommendations_from_openai(file_path):
   messages = client.beta.threads.messages.list(
           thread_id=thread.id
       )
+  
+  
 
   try:
     messages = client.beta.threads.messages.list(thread_id=thread.id)
@@ -146,7 +152,31 @@ async def get_recommendations_from_openai(file_path):
       for rec in recommendations:
         if rec:
           title, tmdb = rec.split(", ")
-          films.append(FilmRecommendation(title=title, tmdb=tmdb))
+          
+          #TMDB API Poster URL
+          url = "https://api.themoviedb.org/3/movie/"+str(tmdb)+"?language=en-US"
+          headers = {
+                        "accept": "application/json",
+                        "Authorization": os.getenv("TMDB_API_KEY")
+                    }
+          
+          response = requests.get(url, headers=headers)
+          
+          if response.status_code == 200:
+            data = response.json()
+            poster_path = data.get("poster_path")
+            
+            if poster_path:
+                poster_url = f"https://image.tmdb.org/t/p/original{poster_path}"
+                films.append(FilmRecommendation(title=title,tmdb=tmdb,poster=poster_url))
+                
+            else:
+                films.append(FilmRecommendation(title=title,tmdb=tmdb,poster=None))
+                raise HTTPException(status_code=404, detail="No Poster Found")
+          else:
+            films.append(FilmRecommendation(title=title,tmdb=tmdb,poster=None))
+            raise HTTPException(status_code=404, detail="No Poster Found")
+            
       return films
     else:
       raise HTTPException(status_code=404, detail="No recommendations found")
